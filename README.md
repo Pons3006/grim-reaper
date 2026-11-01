@@ -134,6 +134,23 @@ Order and duration will be revised after assessing hardware, experience, budget,
 
 _Setup instructions will be added as Stage 1 lands._
 
+## Repository layout
+
+```
+src/grim_reaper/   tokenizer, model, training, inference, finetune, rag, eval
+backend/           API layer between the UI and model/retrieval code
+web/               web application (Graveyard, Arena, Soul Forge, Crypt, Judgement)
+configs/           experiment and model configuration files
+experiments/       run metadata (large weights/datasets are git-ignored)
+data/              local datasets (git-ignored)
+tests/
+docs/              technical brief
+```
+
+## License
+
+MIT, see [LICENSE](LICENSE).
+
 ## Guiding principle
 
 Grim Reaper should be a **real, inspectable LLM experimentation system**, not merely a themed chatbot UI.

@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node / web
+node_modules/
+dist/
+.next/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Large artifacts (keep metadata in git, weights/datasets out)
+data/*
+!data/.gitkeep
+experiments/*
+!experiments/.gitkeep
+checkpoints/
+adapters/
+*.pt
+*.pth
+*.safetensors
+*.bin
+*.gguf
+*.ckpt
+*.faiss
+*.sqlite
+*.db
+
+# Logs / OS / editors
+*.log
+wandb/
+runs/
+.DS_Store
+.idea/
+.vscode/
