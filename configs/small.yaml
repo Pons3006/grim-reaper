@@ -1,0 +1,35 @@
+# First real run: roughly 10M parameters (approximate; exact count is recorded at run time).
+# Wants a GPU (CUDA or Apple MPS); on CPU it will be very slow.
+name: small-10m
+
+model:
+  vocab_size: 4096
+  block_size: 256
+  n_layer: 5
+  n_head: 6
+  n_embd: 384
+  dropout: 0.0
+
+data:
+  dataset: roneneldan/TinyStories
+  data_dir: data/tinystories
+  tokenizer_path: data/tinystories/tokenizer.json
+  val_fraction: 0.01
+  max_stories: null    # full dataset
+
+train:
+  seed: 1337
+  batch_size: 64
+  grad_accum_steps: 1
+  max_steps: 10000
+  lr: 6.0e-4
+  min_lr: 6.0e-5
+  warmup_steps: 200
+  eval_interval: 250
+  eval_iters: 50
+  log_interval: 10
+  sample_interval: 500
+  checkpoint_interval: 500
+  device: auto
+  dtype: auto
+  out_dir: experiments/small-10m

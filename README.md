@@ -111,7 +111,7 @@ The backend is a stable boundary between UI and model/retrieval code. It exposes
 
 ## Roadmap
 
-- [ ] **Stage 1: Working foundation**: repo and dev setup, dataset and tokenizer pipeline, first scratch model, small successful training run, basic generation
+- [ ] **Stage 1: Working foundation**: ~~repo and dev setup~~ (done), dataset and tokenizer pipeline, first scratch model, small successful training run, basic generation
 - [ ] **Stage 2: Model experiments**: larger scratch models, checkpointing and experiment tracking, fine-tuning a compact open model, baseline vs fine-tuned evaluation
 - [ ] **Stage 3: Knowledge retrieval**: ingestion, embeddings and vector retrieval, grounded generation with sources, small RAG eval set
 - [ ] **Stage 4: Research studio**: backend integration, Graveyard, Model Arena, Soul Forge, Knowledge Crypt, Final Judgement
@@ -132,7 +132,27 @@ Order and duration will be revised after assessing hardware, experience, budget,
 
 ## Getting started
 
-_Setup instructions will be added as Stage 1 lands._
+Requires Python 3.10+.
+
+```bash
+git clone https://github.com/Pons3006/grim-reaper
+cd grim-reaper
+python -m venv .venv && source .venv/bin/activate
+make install                           # pip install -e ".[dev]"
+
+grim-reaper config configs/debug.yaml  # validate a config and print the resolved settings
+make test                              # run the tests
+make lint                              # ruff check + format check
+```
+
+Run configs live in [`configs/`](configs/):
+
+| Config | Size (approx.) | Intended hardware |
+|---|---|---|
+| `debug.yaml` | ~1M params | CPU, a few minutes (pipeline smoke test) |
+| `small.yaml` | ~10M params | GPU (CUDA or Apple MPS) |
+
+Parameter counts above are estimates; the exact count is recorded for each run once the model code lands.
 
 ## Repository layout
 

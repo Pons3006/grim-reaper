@@ -1,0 +1,35 @@
+# Pipeline smoke test: ~1M parameters (approximate; exact count is recorded at run time).
+# Small enough to train on a CPU in a few minutes.
+name: debug
+
+model:
+  vocab_size: 4096
+  block_size: 128
+  n_layer: 4
+  n_head: 4
+  n_embd: 128
+  dropout: 0.0
+
+data:
+  dataset: roneneldan/TinyStories
+  data_dir: data/tinystories
+  tokenizer_path: data/tinystories/tokenizer.json
+  val_fraction: 0.01
+  max_stories: 20000   # tiny subset so everything is fast
+
+train:
+  seed: 1337
+  batch_size: 16
+  grad_accum_steps: 1
+  max_steps: 300
+  lr: 1.0e-3
+  min_lr: 1.0e-4
+  warmup_steps: 20
+  eval_interval: 50
+  eval_iters: 20
+  log_interval: 10
+  sample_interval: 100
+  checkpoint_interval: 100
+  device: auto
+  dtype: auto
+  out_dir: experiments/debug
