@@ -8,7 +8,7 @@ This is **not** a claim that a small model will outperform frontier models.
 
 **Welcome to the Graveyard.**
 
-> **Status:** 🚧 Planning / Stage 1. Nothing below is implemented yet. Capabilities listed are goals; results will only be reported once measured.
+> **Status:** 🚧 Stage 1 in progress. Implemented so far: config system, a from-scratch BPE tokenizer, and the dataset/tokenizer pipeline. Everything else below is a goal; results will only be reported once measured.
 
 ---
 
@@ -111,7 +111,7 @@ The backend is a stable boundary between UI and model/retrieval code. It exposes
 
 ## Roadmap
 
-- [ ] **Stage 1: Working foundation**: ~~repo and dev setup~~ (done), dataset and tokenizer pipeline, first scratch model, small successful training run, basic generation
+- [ ] **Stage 1: Working foundation**: ~~repo and dev setup~~ (done), ~~dataset and tokenizer pipeline~~ (done), first scratch model, small successful training run, basic generation
 - [ ] **Stage 2: Model experiments**: larger scratch models, checkpointing and experiment tracking, fine-tuning a compact open model, baseline vs fine-tuned evaluation
 - [ ] **Stage 3: Knowledge retrieval**: ingestion, embeddings and vector retrieval, grounded generation with sources, small RAG eval set
 - [ ] **Stage 4: Research studio**: backend integration, Graveyard, Model Arena, Soul Forge, Knowledge Crypt, Final Judgement
@@ -141,6 +141,10 @@ python -m venv .venv && source .venv/bin/activate
 make install                           # pip install -e ".[dev]"
 
 grim-reaper config configs/debug.yaml  # validate a config and print the resolved settings
+grim-reaper bpe-demo                   # watch the from-scratch BPE learn merges
+grim-reaper data download configs/debug.yaml     # fetch TinyStories (~1.8 GB)
+grim-reaper tokenizer train configs/debug.yaml   # train the 4096-token tokenizer
+grim-reaper data prepare configs/debug.yaml      # write train.bin / val.bin / meta.json
 make test                              # run the tests
 make lint                              # ruff check + format check
 ```
@@ -164,7 +168,7 @@ configs/           experiment and model configuration files
 experiments/       run metadata (large weights/datasets are git-ignored)
 data/              local datasets (git-ignored)
 tests/
-docs/              technical brief
+docs/              technical brief, BPE and data-pipeline guide
 ```
 
 ## License

@@ -61,3 +61,39 @@ scratch version, implemented in Rust so it can chew through millions of stories.
   and tie-breaking differ from ours.
 
 Run it: `grim-reaper tokenizer train configs/debug.yaml` (after `data download`).
+
+## The data pipeline
+
+```
+grim-reaper data download   configs/debug.yaml   # data/tinystories/stories.txt
+grim-reaper tokenizer train configs/debug.yaml   # data/tinystories/tokenizer.json
+grim-reaper data prepare    configs/debug.yaml   # train.bin, val.bin, meta.json
+```
+
+1. **Download** fetches `TinyStories-train.txt` (pinned to a dataset revision) and saves it as
+   `stories.txt`. Re-running skips it; `--force` downloads again.
+2. **Split.** Stories are separated by `<|endoftext|>`. A seeded shuffle (`train.seed`) puts the
+   last `val_fraction` (at least one story) into validation. Same config, same split.
+3. **Tokenize.** Stories are encoded in batches and written as raw `uint16` ids with an
+   end-of-text id after every story, so the model can learn where stories end.
+4. **Provenance.** `meta.json` records the dataset revision, hashes of the text and tokenizer,
+   the seed, story and token counts, and library versions. `prepare` compares these on re-run
+   and skips work that is already up to date.
+
+`debug.yaml` and `small.yaml` share `data/tinystories/`, so preparing one replaces the other's
+files. The next run of the other config notices the mismatch and redoes the work.
+
+If something is wrong, you get a message and not a traceback: a tokenizer whose vocab size does
+not match `model.vocab_size`, a missing tokenizer, a failed download, or too few stories to split.
+
+## Measured numbers
+
+Apple M2, 8 GB RAM, Python 3.15.2, `tokenizers` 0.23.3. Measured with `/usr/bin/time -l`; one run each.
+
+| Config | Stories (train / val) | Tokens (train / val) | `tokenizer train` | `data prepare` |
+|---|---|---|---|---|
+| `debug.yaml` (first 20,000 stories) | 19,800 / 200 | 4,444,359 / 45,781 | 0.8 s, 117 MB peak | 215 MB peak |
+| `small.yaml` (full dataset) | 2,098,294 / 21,195 (230 empty dropped) | 472,556,147 / 4,775,221 | 6 s, 2.5 GB peak | 112 s, 2.7 GB peak |
+
+The peak memory is dominated by holding every story's text in memory at once, not by tokenizing.
+That is fine at this scale; a much larger dataset would need streaming splits.
