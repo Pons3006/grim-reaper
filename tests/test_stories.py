@@ -45,3 +45,10 @@ def test_split_always_has_validation():
 def test_split_single_story_raises():
     with pytest.raises(ConfigError, match="at least 2 stories"):
         split_stories(["only"], 0.1, seed=1)
+
+
+def test_read_stories_non_utf8_raises_config_error(tmp_path):
+    path = tmp_path / "s.txt"
+    path.write_bytes(b"ok<|endoftext|>\xff\xfe bad")
+    with pytest.raises(ConfigError, match="not valid UTF-8"):
+        read_stories(path)

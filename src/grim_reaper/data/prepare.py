@@ -10,8 +10,8 @@ loop can later `np.memmap` them and slice random windows without loading everyth
 
 from __future__ import annotations
 
-import hashlib
 import json
+import os
 import platform
 from pathlib import Path
 from typing import Any
@@ -21,20 +21,12 @@ import tokenizers
 
 from ..config import ConfigError, RunConfig
 from ..tokenizer.bpe import SPECIAL_TOKEN
-from ..tokenizer.train import load_tokenizer
+from ..tokenizer.train import load_tokenizer, sidecar_path, split_identity
 from .download import DATASET_REVISION
-from .stories import read_stories, split_stories
+from .stories import read_stories, sha256_file, split_stories
 
 MAX_UINT16 = 65535
 BATCH_STORIES = 2000  # stories encoded per call; keeps memory flat on large datasets
-
-
-def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        while chunk := f.read(1 << 22):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def _write_split(path: Path, stories: list[str], tok: tokenizers.Tokenizer, eot: int) -> int:
@@ -47,6 +39,21 @@ def _write_split(path: Path, stories: list[str], tok: tokenizers.Tokenizer, eot:
             np.asarray(ids, dtype=np.uint16).tofile(f)
             total += len(ids)
     return total
+
+
+def _check_tokenizer_split(cfg: RunConfig, source_sha256: str) -> None:
+    """Refuse a tokenizer trained for a different split: its vocab may have seen our val text."""
+    side = sidecar_path(cfg.data.tokenizer_path)
+    try:
+        trained_for = json.loads(side.read_text())
+    except (OSError, json.JSONDecodeError):
+        trained_for = None
+    if trained_for != split_identity(cfg, source_sha256):
+        raise ConfigError(
+            "the tokenizer was not trained for this config's split (different split, text, "
+            "or missing record); validation text could have leaked into its vocabulary. "
+            "Run `grim-reaper tokenizer train` first."
+        )
 
 
 def prepare_dataset(
@@ -71,11 +78,13 @@ def prepare_dataset(
 
     out = Path(cfg.data.data_dir)
     src = Path(stories_path)
+    source_sha = sha256_file(src)
+    _check_tokenizer_split(cfg, source_sha)
     identity = {
         "dataset": cfg.data.dataset,
         "dataset_revision": DATASET_REVISION,
-        "source_sha256": _sha256(src),
-        "tokenizer_sha256": _sha256(Path(cfg.data.tokenizer_path)),
+        "source_sha256": source_sha,
+        "tokenizer_sha256": sha256_file(cfg.data.tokenizer_path),
         "vocab_size": cfg.model.vocab_size,
         "seed": cfg.train.seed,
         "max_stories": cfg.data.max_stories,
@@ -88,7 +97,10 @@ def prepare_dataset(
         and (out / "train.bin").is_file()
         and (out / "val.bin").is_file()
     ):
-        existing = json.loads(meta_path.read_text())
+        try:
+            existing = json.loads(meta_path.read_text())
+        except json.JSONDecodeError:
+            existing = {}  # a truncated meta.json just means "redo the work"
         if all(existing.get(k) == v for k, v in identity.items()):
             return existing
 
@@ -111,5 +123,7 @@ def prepare_dataset(
             "numpy": np.__version__,
         },
     }
-    meta_path.write_text(json.dumps(meta, indent=2))
+    tmp = meta_path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(meta, indent=2))
+    os.replace(tmp, meta_path)
     return meta

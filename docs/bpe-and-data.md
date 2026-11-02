@@ -81,7 +81,13 @@ grim-reaper data prepare    configs/debug.yaml   # train.bin, val.bin, meta.json
    and skips work that is already up to date.
 
 `debug.yaml` and `small.yaml` share `data/tinystories/`, so preparing one replaces the other's
-files. The next run of the other config notices the mismatch and redoes the work.
+files. Switching configs needs two steps: `tokenizer train` again, then `data prepare`.
+
+`tokenizer train` also writes `tokenizer.meta.json` next to the tokenizer, recording the source
+text hash, seed, `max_stories`, `val_fraction` and vocab size it was built for. `prepare` refuses a
+tokenizer whose record does not match the current config. Without this, running `prepare` for a
+config with a different split would reuse a vocabulary that had already seen some of its
+validation stories.
 
 If something is wrong, you get a message and not a traceback: a tokenizer whose vocab size does
 not match `model.vocab_size`, a missing tokenizer, a failed download, or too few stories to split.

@@ -108,3 +108,56 @@ def test_skip_when_unchanged_and_force_reruns(tmp_path):
     assert (tmp_path / "train.bin").stat().st_mtime_ns == first
     prepare_dataset(cfg, src, force=True)
     assert (tmp_path / "train.bin").stat().st_mtime_ns != first
+
+
+def test_tokenizer_trained_for_different_split_refuses(tmp_path):
+    cfg, src = _setup(tmp_path)
+    cfg.data.max_stories = 30
+    with pytest.raises(ConfigError, match="different split.*tokenizer train"):
+        prepare_dataset(cfg, src)
+
+
+def test_tokenizer_without_sidecar_refuses(tmp_path):
+    cfg, src = _setup(tmp_path)
+    (tmp_path / "tokenizer.meta.json").unlink()
+    with pytest.raises(ConfigError, match="tokenizer train"):
+        prepare_dataset(cfg, src)
+
+
+def test_truncated_meta_is_treated_as_stale(tmp_path):
+    cfg, src = _setup(tmp_path)
+    prepare_dataset(cfg, src)
+    (tmp_path / "meta.json").write_text('{"dataset": ')
+    meta = prepare_dataset(cfg, src)
+    assert meta["stories"]["train"] + meta["stories"]["val"] == 60
+    assert json.loads((tmp_path / "meta.json").read_text()) == meta
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda cfg, src: setattr(cfg.data, "max_stories", 50),
+        lambda cfg, src: setattr(cfg.train, "seed", 7),
+        lambda cfg, src: setattr(cfg.data, "val_fraction", 0.2),
+        lambda cfg, src: src.write_text(SPECIAL_TOKEN.join(_stories(80))),
+    ],
+    ids=["max_stories", "seed", "val_fraction", "source_text"],
+)
+def test_rerun_rewrites_when_input_changes(tmp_path, change):
+    cfg, src = _setup(tmp_path)
+    prepare_dataset(cfg, src)
+    first = (tmp_path / "train.bin").stat().st_mtime_ns
+    change(cfg, src)
+    train_tokenizer(cfg, src)  # the tokenizer must be retrained for the new split
+    prepare_dataset(cfg, src)
+    assert (tmp_path / "train.bin").stat().st_mtime_ns != first
+
+
+def test_rerun_rewrites_when_tokenizer_file_changes(tmp_path):
+    cfg, src = _setup(tmp_path)
+    prepare_dataset(cfg, src)
+    first = (tmp_path / "train.bin").stat().st_mtime_ns
+    path = tmp_path / "tokenizer.json"
+    path.write_text(json.dumps(json.loads(path.read_text()), indent=1))  # same tokenizer, new bytes
+    prepare_dataset(cfg, src)
+    assert (tmp_path / "train.bin").stat().st_mtime_ns != first

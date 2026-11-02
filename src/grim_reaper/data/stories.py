@@ -6,6 +6,7 @@ which stories are validation. That matters: validation text must never influence
 
 from __future__ import annotations
 
+import hashlib
 import random
 from pathlib import Path
 
@@ -34,13 +35,16 @@ def read_stories(
         stories.append(text)
         return max_stories is not None and len(stories) >= max_stories
 
-    with open(path, encoding="utf-8") as f:
-        while chunk := f.read(chunk_chars):
-            *done, carry = (carry + chunk).split(SPECIAL_TOKEN)
-            for text in done:
-                if take(text):
-                    return stories, dropped
-        take(carry)
+    try:
+        with open(path, encoding="utf-8") as f:
+            while chunk := f.read(chunk_chars):
+                *done, carry = (carry + chunk).split(SPECIAL_TOKEN)
+                for text in done:
+                    if take(text):
+                        return stories, dropped
+            take(carry)
+    except UnicodeDecodeError as e:
+        raise ConfigError(f"{path} is not valid UTF-8 text (bad byte at offset {e.start})") from e
     return stories, dropped
 
 
@@ -61,3 +65,11 @@ def split_stories(
 def stories_path(cfg: RunConfig) -> Path:
     """Where the raw story text lives (download writes it here, everything else reads it)."""
     return Path(cfg.data.data_dir) / "stories.txt"
+
+
+def sha256_file(path: str | Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        while chunk := f.read(1 << 22):
+            h.update(chunk)
+    return h.hexdigest()

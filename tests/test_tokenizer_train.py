@@ -79,3 +79,30 @@ def test_bridge_scratch_vs_library(tmp_path):
     ]:
         assert text == sample
         assert len(ids) < raw
+
+
+def test_train_writes_split_sidecar(tmp_path):
+    import json
+
+    cfg = _cfg(tmp_path)
+    path = train_tokenizer(cfg, _write(tmp_path, _stories()))
+    side = json.loads(path.with_suffix(".meta.json").read_text())
+    assert side["max_stories"] is None and side["seed"] == cfg.train.seed
+    assert side["val_fraction"] == 0.1 and side["vocab_size"] == 300 and "source_sha256" in side
+
+
+def test_vocab_below_257_refuses(tmp_path):
+    with pytest.raises(ConfigError, match="at least 257"):
+        train_tokenizer(_cfg(tmp_path, vocab=100), _write(tmp_path, _stories()))
+
+
+def test_corpus_too_small_for_vocab_refuses(tmp_path):
+    with pytest.raises(ConfigError, match="corpus is too small"):
+        train_tokenizer(_cfg(tmp_path, vocab=4096), _write(tmp_path, _stories()))
+
+
+def test_load_corrupt_raises_config_error(tmp_path):
+    bad = tmp_path / "tokenizer.json"
+    bad.write_text("{not json")
+    with pytest.raises(ConfigError, match="unreadable.*tokenizer train"):
+        load_tokenizer(bad)

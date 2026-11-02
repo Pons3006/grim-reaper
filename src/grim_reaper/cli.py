@@ -42,6 +42,8 @@ def _show(piece: bytes) -> str:
 
 
 def _cmd_bpe_demo(args: argparse.Namespace) -> int:
+    if args.vocab_size < 257:
+        raise ConfigError(f"--vocab-size must be at least 257, got {args.vocab_size}")
     texts = [args.text] if args.text else DEMO_CORPUS
     token_bytes: dict[int, bytes] = {i: bytes([i]) for i in range(256)}
     print(f"training on {len(texts)} text(s), vocab size {args.vocab_size}\n")
