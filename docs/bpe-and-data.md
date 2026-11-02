@@ -42,3 +42,22 @@ Details worth knowing:
   We use it to mark where one story ends and the next begins.
 - **Vocab arithmetic.** vocab = 256 bytes + merges + 1 special token, so a vocab of 4096 allows
   at most 3839 merges.
+
+## Library BPE and the bridge
+
+The real run uses Hugging Face `tokenizers` (`tokenizer/train.py`). It is the same idea as our
+scratch version, implemented in Rust so it can chew through millions of stories.
+
+- **Byte-level.** Like ours, it starts from the 256 byte values, so nothing is ever "unknown".
+- **Train split only.** The tokenizer is trained on training stories (capped at 50,000), never on
+  validation stories. Otherwise validation text would leak into the vocabulary and make validation
+  loss look better than it deserves. A test plants a rare marker word in a validation story and
+  checks it never enters the vocab.
+- **Same split everywhere.** `data/stories.py` owns the seeded shuffle that decides which
+  stories are validation, so tokenizer training and token-file preparation always agree.
+- **The bridge.** `tests/test_tokenizer_train.py::test_bridge_scratch_vs_library` trains both
+  tokenizers on the same sample and checks that each round-trips the text exactly and uses fewer
+  tokens than raw bytes. We do not claim they learn identical merges; the library's pre-splitting
+  and tie-breaking differ from ours.
+
+Run it: `grim-reaper tokenizer train configs/debug.yaml` (after `data download`).

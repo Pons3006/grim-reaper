@@ -3,6 +3,7 @@
 Commands are added stage by stage. Right now:
   config    validate a run config and print the resolved settings
   bpe-demo  train the from-scratch BPE on a tiny corpus and show every merge
+  tokenizer train   train the real (Hugging Face) BPE tokenizer for a run config
 """
 
 from __future__ import annotations
@@ -14,7 +15,9 @@ import yaml
 
 from . import __version__
 from .config import ConfigError, load_config
+from .data.stories import stories_path
 from .tokenizer.bpe import BPETokenizer
+from .tokenizer.train import train_tokenizer
 
 
 def _cmd_config(args: argparse.Namespace) -> int:
@@ -56,6 +59,16 @@ def _cmd_bpe_demo(args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
+def _cmd_tokenizer_train(args: argparse.Namespace) -> int:
+    cfg = load_config(args.path)
+    src = stories_path(cfg)
+    if not src.is_file():
+        raise ConfigError(f"no story text at {src}; run `grim-reaper data download {args.path}`")
+    out = train_tokenizer(cfg, src)
+    print(f"wrote {out} (vocab size {cfg.model.vocab_size})")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="grim-reaper", description="Grim Reaper: a tiny LLM research studio."
@@ -71,6 +84,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_demo.add_argument("--vocab-size", type=int, default=270, help="default: 270")
     p_demo.add_argument("--text", help="train on this text instead of the built-in corpus")
     p_demo.set_defaults(func=_cmd_bpe_demo)
+
+    p_tok = sub.add_parser("tokenizer", help="tokenizer commands")
+    tok_sub = p_tok.add_subparsers(dest="tokenizer_command", required=True)
+    p_train = tok_sub.add_parser("train", help="train the real BPE tokenizer for a run config")
+    p_train.add_argument("path", help="path to a YAML config, e.g. configs/debug.yaml")
+    p_train.set_defaults(func=_cmd_tokenizer_train)
     return parser
 
 

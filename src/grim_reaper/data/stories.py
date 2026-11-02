@@ -9,7 +9,7 @@ from __future__ import annotations
 import random
 from pathlib import Path
 
-from ..config import ConfigError
+from ..config import ConfigError, RunConfig
 from ..tokenizer.bpe import SPECIAL_TOKEN
 
 
@@ -56,3 +56,8 @@ def split_stories(
     val = [stories[i] for i in order[-n_val:]]
     train = [stories[i] for i in order[:-n_val]]
     return train, val
+
+
+def stories_path(cfg: RunConfig) -> Path:
+    """Where the raw story text lives (download writes it here, everything else reads it)."""
+    return Path(cfg.data.data_dir) / "stories.txt"
