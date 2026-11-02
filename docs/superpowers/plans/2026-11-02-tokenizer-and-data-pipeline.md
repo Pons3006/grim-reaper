@@ -20,7 +20,7 @@
 - No `datasets` library. Tests never touch the network.
 - Config failures raise `ConfigError`; the CLI prints `error: ...` to stderr and returns 2, as `cli.py` does.
 - One new dependency only: `huggingface_hub` in `pyproject.toml`.
-- Commit messages end with `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
+- Commit messages are plain and authored by the user: no `Co-Authored-By` trailer and no Claude attribution.
 
 ## Review Focus
 
