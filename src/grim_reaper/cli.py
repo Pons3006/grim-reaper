@@ -4,6 +4,7 @@ Commands are added stage by stage. Right now:
   config    validate a run config and print the resolved settings
   bpe-demo  train the from-scratch BPE on a tiny corpus and show every merge
   data download     fetch the dataset text for a run config
+  data prepare      tokenize the text into train.bin / val.bin / meta.json
   tokenizer train   train the real (Hugging Face) BPE tokenizer for a run config
 """
 
@@ -17,6 +18,7 @@ import yaml
 from . import __version__
 from .config import ConfigError, load_config
 from .data.download import DownloadError, download_dataset
+from .data.prepare import prepare_dataset
 from .data.stories import stories_path
 from .tokenizer.bpe import BPETokenizer
 from .tokenizer.train import train_tokenizer
@@ -78,6 +80,18 @@ def _cmd_data_download(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_data_prepare(args: argparse.Namespace) -> int:
+    cfg = load_config(args.path)
+    src = stories_path(cfg)
+    if not src.is_file():
+        raise ConfigError(f"no story text at {src}; run `grim-reaper data download {args.path}`")
+    meta = prepare_dataset(cfg, src, force=args.force)
+    s, t = meta["stories"], meta["tokens"]
+    print(f"stories: {s['train']} train / {s['val']} val ({s['dropped_empty']} empty dropped)")
+    print(f"tokens:  {t['train']} train / {t['val']} val  -> {cfg.data.data_dir}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="grim-reaper", description="Grim Reaper: a tiny LLM research studio."
@@ -106,6 +120,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_dl.add_argument("path", help="path to a YAML config, e.g. configs/debug.yaml")
     p_dl.add_argument("--force", action="store_true", help="download again even if present")
     p_dl.set_defaults(func=_cmd_data_download)
+    p_prep = data_sub.add_parser("prepare", help="tokenize the text into train.bin / val.bin")
+    p_prep.add_argument("path", help="path to a YAML config, e.g. configs/debug.yaml")
+    p_prep.add_argument("--force", action="store_true", help="redo even if up to date")
+    p_prep.set_defaults(func=_cmd_data_prepare)
     return parser
 
 
